@@ -220,6 +220,9 @@ local LoadLocale = function()
 	strings.options.display.position.xOffset.tooltip = strings.options.display.position.xOffset.tooltip:gsub("#ANCHOR", strings.options.display.position.anchor.label)
 	strings.options.display.position.yOffset.tooltip = strings.options.display.position.yOffset.tooltip:gsub("#ANCHOR", strings.options.display.position.anchor.label)
 
+	--Set screenshot file name format
+	strings.scr = "WoWScrnShot_#DATE.#TYPE"
+
 	return strings
 end
 

@@ -1371,20 +1371,20 @@ if not next(ns.WidgetToolbox) then
 
 	---Format a clickable hyperlink text via escape sequences
 	---@param type HyperlinkType [Type of the hyperlink](https://wowpedia.fandom.com/wiki/Hyperlinks#Types) determining how it's being handled and what payload it carries
-	---@param content string A colon-separated chain of parameters determined by **type** (Example: "content1:content2:content3")
+	---@param content? string A colon-separated chain of parameters determined by **type** (Example: "content1:content2:content3") | ***Default:*** ""
 	---@param text string Clickable text to be displayed as the hyperlink
 	---@return string
 	wt.Hyperlink = function(type, content, text)
-		return "\124H" .. type .. ":" .. content .. "\124h" .. text .. "\124h"
+		return "\124H" .. type .. ":" .. (content or "") .. "\124h" .. text .. "\124h"
 	end
 
 	---Format a custom clickable addon hyperlink text via escape sequences
 	---@param addon string The name of the addon's folder (the addon namespace, not its displayed title)
 	---@param type? string A unique key signifying the type of the hyperlink specific to the addon (if the addon handles multiple different custom types of hyperlinks) in order to be able to set unique hyperlink click handlers via ***WidgetToolbox*.SetHyperlinkHandler(...)** | ***Default:*** "-"
-	---@param content string A colon-separated chain of data strings carried by the hyperlink to be provided to the handler function (Example: "content1:content2:content3")
+	---@param content? string A colon-separated chain of data strings carried by the hyperlink to be provided to the handler function (Example: "content1:content2:content3") | ***Default:*** ""
 	---@param text string Clickable text to be displayed as the hyperlink
 	wt.CustomHyperlink = function(addon, type, content, text)
-		return wt.Hyperlink(wt.preDF and "item" or "addon", addon .. ":" .. (type or "-") .. ":" .. content, text)
+		return wt.Hyperlink(wt.preDF and "item" or "addon", addon .. ":" .. (type or "-") .. ":" .. (content or ""), text)
 	end
 
 	--Collection of hyperlink handler scripts

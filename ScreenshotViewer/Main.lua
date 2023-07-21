@@ -62,6 +62,7 @@ local dbcDefault = {
 
 --Local frame references
 local frames = {
+	display = {},
 	options = {
 		main = {},
 		specifications = {},
@@ -73,6 +74,47 @@ local frames = {
 
 
 --[[ UTILITIES ]]
+
+--[ Screenshot Handling ]
+
+--Latest screenshot dating
+local lastDate1
+local lastDate2
+local lastDate
+
+---Format a screenshot file name
+---@param date string Must be in "MMDDYY_hhmmss" format (when calling [date(...)](https://wowpedia.fandom.com/wiki/API_date), use `"%m%d%y_%H%M%S"` to get this formatting)
+---@return string
+local function GetScrName(date)
+	return ns.strings.scr:gsub("#DATE", date):gsub("#TYPE", GetCVar("screenshotFormat"):gsub("jpeg", "jpg"))
+end
+
+---Format a screenshot texture file path
+---@param name string name of the texture file (use GetScrName(...) to format)
+---@return string
+local function GetScrPath(name)
+	return "Screenshots/" .. name
+end
+
+--Check the last screenshot and  verify its date & time to set its file name
+local function FindLastScreenshot()
+	frames.display.texture:SetTexture(ns.textures.logo)
+
+	frames.display.texture:SetTexture(GetScrPath(GetScrName(lastDate1)))
+	if frames.display.texture:GetTexture() ~= ns.textures.logo then
+		lastDate = lastDate1
+		return
+	end
+
+	frames.display.texture:SetTexture(GetScrPath(GetScrName(lastDate2)))
+	if frames.display.texture:GetTexture() ~= ns.textures.logo then
+		lastDate = lastDate2
+		return
+	end
+
+	print("STILL NOT FOUND!")
+end
+
 
 --[ DB Management ]
 
@@ -100,48 +142,6 @@ local function CheckDBs(dbCheck, dbSample, dbcCheck, dbcSample)
 	wt.AddMissing(dbcCheck, dbcSample)
 	wt.RemoveMismatch(dbCheck, dbSample, {})
 	wt.RemoveMismatch(dbcCheck, dbcSample, {})
-end
-
---[ Display ]
-
----Set the backdrop of the display elements
----@param enabled boolean Whether to add or remove the backdrop elements of the display
----@param bgColor table Table containing the backdrop background color values
---- - **r** number ― Red (Range: 0 - 1)
---- - **g** number ― Green (Range: 0 - 1)
---- - **b** number ― Blue (Range: 0 - 1)
---- - **a** number ― Opacity (Range: 0 - 1)
----@param borderColor table Table containing the backdrop border color values
---- - **r** number ― Red (Range: 0 - 1)
---- - **g** number ― Green (Range: 0 - 1)
---- - **b** number ― Blue (Range: 0 - 1)
---- - **a** number ― Opacity (Range: 0 - 1)
-local function SetDisplayBackdrop(enabled, bgColor, borderColor)
-	wt.SetBackdrop(frames.display, enabled and {
-		background = {
-			texture = { size = 5, },
-			color = bgColor
-		},
-		border = {
-			texture = {
-				path = "Interface/ChatFrame/ChatFrameBackground",
-				width = 1,
-			},
-			color = borderColor
-		}
-	} or nil)
-end
-
----Set the visibility, backdrop, font family, size and color of the display to the currently saved values
----@param data table Account-wide data table to set the display values from
----@param characterData table Character-specific data table to set the display values from
-local function SetDisplayValues(data, characterData)
-	--Visibility
-	frames.main:SetFrameStrata(data.display.layer.strata)
-	wt.SetVisibility(frames.main, not characterData.hidden)
-
-	--Display
-	SetDisplayBackdrop(data.display.background.visible, data.display.background.colors.bg, data.display.background.colors.border)
 end
 
 
@@ -810,7 +810,7 @@ local function AddonLoaded(self, addon)
 	wt.SetPosition(self, db.display.position)
 
 	--Make movable
-	wt.SetMovability(frames.main, true, "SHIFT", { frames.display, }, {
+	wt.SetMovability(frames.main, true, "SHIFT", { frames.display.panel, }, {
 		onStop = function()
 			--Save the position (for account-wide use)
 			wt.CopyValues(wt.PackPosition(frames.main:GetPoint()), db.display.position)
@@ -836,10 +836,6 @@ local function AddonLoaded(self, addon)
 			print(wt.Color(ns.strings.chat.position.error, ns.colors.yellow[2]))
 		end
 	})
-
-	--[ Display Setup ]
-
-	SetDisplayValues(db, dbc)
 end
 
 --[ Frames ]
@@ -848,22 +844,90 @@ end
 frames.main = wt.CreateFrame({
 	parent = UIParent,
 	name = addonNameSpace,
-	keepInBounds = true,
-	size = { width = 33, height = 10 },
-	keepOnTop = true,
+	position = { anchor = "CENTER", },
 	onEvent = {
 		ADDON_LOADED = AddonLoaded,
-		SCREENSHOT_STARTED = function(self, ...) print("start", ...) end,
-		SCREENSHOT_SUCCEEDED = function(self, ...) print("done", ...) end,
+		SCREENSHOT_STARTED = function()
+			lastDate1 = date("%m%d%y_%H%M%S")
+			print("A screenshot is being created…")
+		end,
+		SCREENSHOT_SUCCEEDED = function()
+			lastDate2 = date("%m%d%y_%H%M%S")
+			print(lastDate1 .. " - 1")
+			print(lastDate2 .. " - 2")
+			print("A new screenshot was saved. " .. wt.CustomHyperlink(addonNameSpace, nil, nil, "[Click here to view!]"))
+		end,
 	},
 	initialize = function(frame)
-		frames.display = wt.CreateFrame({
-			parent = frame,
-			name = "Display",
-			customizable = true,
+		frames.display.panel = wt.CreatePanel({
+			parent = UIParent,
+			name = addonNameSpace .. "Display",
+			append = false,
+			title = addonTitle,
+			position = {
+				anchor = "CENTER",
+				offset = { y = 24 },
+			},
 			keepInBounds = true,
-			size = { width = 600, height = 400 },
-			keepOnTop = true,
+			size = { width = 1312, height = 808 },
+			background = { color = { a = 0.9 }, },
+			initialize = function(panel)
+				wt.CreateTexture({
+					parent = panel,
+					position = {
+						anchor = "TOP",
+						offset = { y = -42 },
+					},
+					size = { width = 1280, height = 720 },
+					path = GetScrPath(GetScrName("050623_074413")),
+				})
+				wt.CreateFrame({
+					parent = panel,
+					name = "Image",
+					arrange = {},
+				})
+				frames.display.texture = panel:CreateTexture()
+
+				--Button: Close
+				wt.CreateButton({
+					parent = panel,
+					name = "CancelButton",
+					title = wt.GetStrings("close"),
+					position = {
+						anchor = "BOTTOMRIGHT",
+						offset = { x = -16, y = 16 },
+					},
+					events = { OnClick = function() panel:Hide() end },
+				})
+
+				--Button: Reset position
+				wt.CreateButton({
+					parent = panel,
+					name = "ResetButton",
+					title = "Reset Position",
+					position = {
+						anchor = "BOTTOMRIGHT",
+						offset = { x = -108, y = 16 },
+					},
+					size = { width = 120, },
+					events = { OnClick = function() wt.SetPosition(panel, {
+						anchor = "CENTER",
+						offset = { y = 24 },
+					}) end },
+				})
+			end,
 		})
+		_G[frames.display.panel:GetName() .. "Title"]:SetPoint("TOPLEFT", 18, -18)
+		wt.SetMovability(frames.display.panel, true)
+		frames.display.panel:SetFrameStrata("DIALOG")
+		frames.display.panel:IsToplevel(true)
+		-- frames.display.panel:Hide()
+
+		--Hyperlink: Open screenshot viewer
+		wt.SetHyperlinkHandler(addonNameSpace, nil, function()
+			frames.display.panel:Show()
+			FindLastScreenshot()
+			print("Showing " .. GetScrName(lastDate) .. "..")
+		end)
 	end
 })

@@ -1,0 +1,18 @@
+## Interface: 100105 #Fallback to the Mainline version
+## Title: Screenshot Viewer
+## IconTexture: Interface/AddOns/ScreenshotViewer/Textures/Logo.tga
+## Version: 1.0
+## X-Day: 21
+## X-Month: 7
+## X-Year: 2023
+## Author: Barnabas Nagy (Arxareon)
+## X-Sponsors: Celierra
+## X-License: All Rights Reserved
+## Notes: View the screenshots you took.
+## SavedVariables: ScreenshotViewerDB, ScreenshotViewerCS
+## SavedVariablesPerCharacter: ScreenshotViewerDBC
+## Dependencies: WidgetTools
+
+Resources.lua
+WidgetToolbox.lua
+Main.lua

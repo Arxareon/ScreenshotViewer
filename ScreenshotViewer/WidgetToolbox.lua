@@ -233,7 +233,11 @@ if not next(ns.WidgetToolbox) then
 	---@param blockrule? function Function to manually filter which keys get printed and explored further
 	--- - @*param* `key` integer|string ― The currently dumped key
 	--- - @*return* boolean ― Skip the key if the returned value is true
-	--- - ***Example - Comparison:*** Skip the key based the result of a comparison between it (if it's an index) and a specified number value
+	--- - ***Example - Match:*** Skip a specific matching key
+	--- 	```
+	--- 	function(key) return key == "skip_key" end
+	--- 	```
+	--- - ***Example - Comparison:*** Skip an index key based the result of a comparison
 	--- 	```
 	--- 	function(key)
 	--- 		if type(key) == "number" then --check if the key is an index to avoid issues with mixed tables
@@ -747,6 +751,21 @@ if not next(ns.WidgetToolbox) then
 
 		--Set user placed
 		if frame["SetUserPlaced"] and frame:IsMovable() then frame:SetUserPlaced(userPlaced ~= false) end
+	end
+
+	---Convert the position of a frame positioned relative to another to absolute position (being positioned in the UIParent)
+	---@param frame Frame Reference to the frame the position of which to be converted to absolute position
+	wt.ConvertToAbsolutePosition = function(frame)
+		--Store movability
+		local movable = frame:IsMovable()
+
+		--Convert position
+		frame:SetMovable(true)
+		frame:StartMoving()
+		frame:StopMovingOrSizing()
+
+		--Restore movability
+		frame:SetMovable(movable)
 	end
 
 	---Arrange the child frames of a container frame into stacked rows based on the parameters provided
@@ -2599,8 +2618,11 @@ if not next(ns.WidgetToolbox) then
 			if not enabled then return end
 			if button == "RightButton" and isInside then
 				contextMenu:RegisterEvent("GLOBAL_MOUSE_DOWN")
+
+				--Open the menu
 				contextMenu:Show()
 				PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+
 				--Position
 				if t.cursor ~= false then
 					local x, y = GetCursorPosition()
@@ -2619,6 +2641,8 @@ if not next(ns.WidgetToolbox) then
 		function contextMenu:GLOBAL_MOUSE_UP(button)
 			if (button == "LeftButton" or button == "RightButton") and not t.parent:IsMouseOver() and not contextMenu:IsMouseOver() and not checkSubmenus() then
 				contextMenu:UnregisterEvent("GLOBAL_MOUSE_UP")
+
+				--Close the menu
 				contextMenu:Hide()
 				PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF)
 			end
@@ -2639,6 +2663,8 @@ if not next(ns.WidgetToolbox) then
 			if not enabled then
 				contextMenu:UnregisterEvent("GLOBAL_MOUSE_DOWN")
 				contextMenu:UnregisterEvent("GLOBAL_MOUSE_UP")
+
+				--Close the menu
 				contextMenu:Hide()
 				PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF)
 			end
@@ -2846,7 +2872,7 @@ if not next(ns.WidgetToolbox) then
 	--- - **name**? string *optional* — Unique string used to set the name of the new frame | ***Default:*** "ContextMenu"
 	--- 	- ***Note:*** Space characters will be removed.
 	--- - **append**? boolean *optional* — When setting the name, append **t.name** to the name of **t.parent** instead | ***Default:*** true
-	--- - **anchor** string|Region — The current cursor position or a region or frame reference | ***Default:*** 'cursor'
+	--- - **anchor**? string|Region — The current cursor position or a region or frame reference | ***Default:*** 'cursor'
 	--- - **offset**? table *optional*
 	--- 	- **x**? number | ***Default:*** 0
 	--- 	- **y**? number | ***Default:*** 0
@@ -6118,7 +6144,7 @@ if not next(ns.WidgetToolbox) then
 
 		--Label
 		local label = wt.AddTitle({
-			parent = textBox.editBox,
+			parent = textBox,
 			title = t.label ~= false and {
 				offset = { x = -1, },
 				text = title,
@@ -6637,11 +6663,12 @@ if not next(ns.WidgetToolbox) then
 	--- - **value** table
 	--- 	- **min** number — Lower numeric value limit
 	--- 	- **max** number — Upper numeric value limit
-	--- 	- **step**? number *optional* — Size of value increments | ***Default:*** *the value can be freely changed (within range, no set increments)*
-	--- 	- **fractional**? integer *optional* — If the value is fractional, display this many decimal digits | ***Default:*** *the most amount of digits present in the fractional part of* **t.value.min**, **t.value.max** *or* **t.value.step**
+	--- 	- **increment**? number *optional* — Size of value increment | ***Default:*** *the value can be freely changed (within range)*
+	--- 	- **fractional**? integer *optional* — If the value is fractional, display this many decimal digits | ***Default:*** *the most amount of digits present in the fractional part of* **t.value.min**, **t.value.max** *or* **t.value.increment**
 	--- - **valueBox**? boolean *optional* — Whether or not should the slider have an [EditBox](https://wowpedia.fandom.com/wiki/UIOBJECT_EditBox) as a child to manually enter a precise value to move the slider to | ***Default:*** true
-	--- - **sideButtons**? boolean *optional* — Whether or not to add increase/decrease buttons next to the slider to change the value by the increment set in **value.step** or by 10% of the difference of **value.min** & **value.max** | ***Default:*** true
-	--- - **altValue**? number *optional* — If set, add/subtract this much when clicking the increase/decrease buttons while holding ALT | ***Default:*** *no alternative step value*
+	--- - **sideButtons**? boolean *optional* — Whether or not to add increase/decrease buttons next to the slider to change the value by the increment set in **t.step** | ***Default:*** true
+	--- - ***step***? number *optional* — Add/subtract this much when clicking the increase/decrease buttons | ***Default:*** **t.value.increment** or (t.value.max - t.value.min) / 10
+	--- - **altStep**? number *optional* — If set, add/subtract this much when clicking the increase/decrease buttons while holding ALT | ***Default:*** *no alternative step value*
 	--- - **events**? table *optional* — Table of key, value pairs that holds script event handlers to be set for the slider
 	--- 	- **[*key*]** scriptType — Event name corresponding to a defined script handler for [Frame](https://wowpedia.fandom.com/wiki/UIOBJECT_Frame#Defined_Script_Handlers) or [Slider](https://wowpedia.fandom.com/wiki/Widget_script_handlers#Slider)
 	--- 		- ***Example:*** "[OnValueChanged](https://wowpedia.fandom.com/wiki/UIHANDLER_OnValueChanged)" whenever the value in the slider widget is modified.
@@ -6774,8 +6801,8 @@ if not next(ns.WidgetToolbox) then
 
 		--Set slider values
 		numeric.slider:SetMinMaxValues(t.value.min, t.value.max)
-		if t.value.step then
-			numeric.slider:SetValueStep(t.value.step)
+		if t.value.increment then
+			numeric.slider:SetValueStep(t.value.increment)
 			numeric.slider:SetObeyStepOnDrag(true)
 		end
 
@@ -6802,7 +6829,7 @@ if not next(ns.WidgetToolbox) then
 			local decimals = t.value.fractional or max(
 				tostring(t.value.min):gsub("-?[%d]+[%.]?([%d]*).*", "%1"):len(),
 				tostring(t.value.max):gsub("-?[%d]+[%.]?([%d]*).*", "%1"):len(),
-				tostring(t.value.step or 0):gsub("-?[%d]+[%.]?([%d]*).*", "%1"):len()
+				tostring(t.value.increment or 0):gsub("-?[%d]+[%.]?([%d]*).*", "%1"):len()
 			)
 			local decimalPattern = ""
 			for _ = 1, decimals do decimalPattern = decimalPattern .. "[%d]?" end
@@ -6836,7 +6863,7 @@ if not next(ns.WidgetToolbox) then
 					OnChar = function(self, _, text) self:SetText(text:gsub(matchPattern, replacePattern)) end,
 					OnEnterPressed = function(self)
 						local v = self:GetNumber()
-						if t.value.step then v = max(t.value.min, min(t.value.max, floor(v * (1 / t.value.step) + 0.5) / (1 / t.value.step))) end
+						if t.value.increment then v = max(t.value.min, min(t.value.max, floor(v * (1 / t.value.increment) + 0.5) / (1 / t.value.increment))) end
 						self.setText(tostring(wt.Round(v, decimals)):gsub(matchPattern, replacePattern))
 						numeric.slider:SetValue(v)
 
@@ -6874,7 +6901,7 @@ if not next(ns.WidgetToolbox) then
 		--[ Side Buttons ]
 
 		if t.sideButtons ~= false then
-			local step = t.value.step or ((t.value.max - t.value.min) / 10)
+			t.step = t.step or t.value.increment or ((t.value.max - t.value.min) / 10)
 
 			--[ Decrease Value ]
 
@@ -6886,8 +6913,8 @@ if not next(ns.WidgetToolbox) then
 				tooltip = {
 					title = strings.slider.decrease.label,
 					lines = {
-						{ text = strings.slider.decrease.tooltip[1]:gsub("#VALUE", step), },
-						t.altValue and { text = strings.slider.decrease.tooltip[2]:gsub("#VALUE", t.altValue), } or nil,
+						{ text = strings.slider.decrease.tooltip[1]:gsub("#VALUE", t.step), },
+						t.altStep and { text = strings.slider.decrease.tooltip[2]:gsub("#VALUE", t.altStep), } or nil,
 					}
 				},
 				position = {
@@ -6904,7 +6931,7 @@ if not next(ns.WidgetToolbox) then
 					disabled = "GameFontDisableMed2",
 				},
 				events = { OnClick = function()
-					numeric.slider:SetValue(numeric.slider:GetValue() - (IsAltKeyDown() and t.altValue or step))
+					numeric.slider:SetValue(numeric.slider:GetValue() - (IsAltKeyDown() and t.altStep or t.step))
 
 					--Call listener & set attribute
 					local value = numeric.slider:GetValue()
@@ -6962,8 +6989,8 @@ if not next(ns.WidgetToolbox) then
 				tooltip = {
 					title = strings.slider.increase.label,
 					lines = {
-						{ text = strings.slider.increase.tooltip[1]:gsub("#VALUE", step), },
-						t.altValue and { text = strings.slider.increase.tooltip[2]:gsub("#VALUE", t.altValue), } or nil,
+						{ text = strings.slider.increase.tooltip[1]:gsub("#VALUE", t.step), },
+						t.altStep and { text = strings.slider.increase.tooltip[2]:gsub("#VALUE", t.altStep), } or nil,
 					}
 				},
 				position = {
@@ -6980,7 +7007,7 @@ if not next(ns.WidgetToolbox) then
 					disabled = "GameFontDisableMed2",
 				},
 				events = { OnClick = function()
-					numeric.slider:SetValue(numeric.slider:GetValue() + (IsAltKeyDown() and t.altValue or step))
+					numeric.slider:SetValue(numeric.slider:GetValue() + (IsAltKeyDown() and t.altStep or t.step))
 
 					--Call listener & set attribute
 					local value = numeric.slider:GetValue()
